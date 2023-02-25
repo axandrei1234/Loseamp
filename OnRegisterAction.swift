@@ -5,7 +5,7 @@
 //  Created by Axente Andrei on 12.02.2023.
 //
 
-import Foundation  // acest file nu i folosit la nimic (era pe vremea cand voiam sa salvez tot in json)
+import Foundation
 
 var users = loadJSON()
 

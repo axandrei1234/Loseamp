@@ -14,7 +14,7 @@ struct RegisterView: View {
     
     @State private var toggle = false
     @State private var showAlert = false
-    @State private var errorMessage = ""
+    @State private var Message = ""
     @State private var loseamp: String = "loseamp"
     @State private var isPresented = false
     @FocusState private var fieldIsFocused: Bool
@@ -27,7 +27,7 @@ struct RegisterView: View {
     @State var checked = false
     
     var alert: Alert {
-        Alert(title: Text(errorMessage), dismissButton: .default(Text("OK")))
+        Alert(title: Text(Message), dismissButton: .default(Text("OK")))
     }
     
     var body: some View {
@@ -106,26 +106,27 @@ struct RegisterView: View {
                 }
                 .position(x:155)
                 Button ("Sign Up") {
-                    toggle.toggle()
                     showDuplicateEmail = false
                     showDuplicateNickname = false
-                    if (isValidEmailAddr(strToValidate: userCredentials.email) && isValidPassword(strToVailidate: userCredentials.password) && keychain.isDuplicateEmail(service: loseamp, account: userCredentials.email) && !isDuplicateNickname(nickname: userCredentials.nickname)) {
-                        print("Email Password, and Nickname are valid")
-                        save(account: userCredentials.email, password: userCredentials.password)
-                        saveJSON(email: userCredentials.email, nickname: userCredentials.nickname)
-                    }
-                    
                     if (!isValidEmailAddr(strToValidate: userCredentials.email) || !isValidPassword(strToVailidate: userCredentials.password)) {
-                        errorMessage = "mail or password are incorrect"
+                        Message = "mail or password are incorrect"
                         self.showAlert.toggle()
                     }
                     if (isDuplicateNickname(nickname: userCredentials.nickname)) {
                         fieldIsFocused = true
                         showDuplicateNickname = true
                     }
-                    if (keychain.isDuplicateEmail(service: loseamp, account: userCredentials.email) == true && isValidEmailAddr(strToValidate: userCredentials.email)) {
+                    if ((keychain.isDuplicateEmail(account: userCredentials.email) == true) && isValidEmailAddr(strToValidate: userCredentials.email)) {
                         fieldIsFocused = true
                         showDuplicateEmail = true
+                    }
+                    
+                    if (isValidEmailAddr(strToValidate: userCredentials.email) && isValidPassword(strToVailidate: userCredentials.password) && !keychain.isDuplicateEmail(account: userCredentials.email) && !isDuplicateNickname(nickname: userCredentials.nickname)) {
+                        print("Email Password, and Nickname are valid")
+                        save(account: userCredentials.email, password: userCredentials.password)
+                        saveJSON(email: userCredentials.email, nickname: userCredentials.nickname)
+                        Message = "account created succesfully"
+                        self.showAlert.toggle()
                     }
                 }
                 .alert(isPresented: $showAlert, content: { self.alert })
@@ -147,4 +148,3 @@ struct RegisterView_Previews: PreviewProvider {
         RegisterView(keychain: KeychainManager.init(), userCredentials: UserCredentials.init(email: "", password: "", nickname: ""))
     }
 }
-
