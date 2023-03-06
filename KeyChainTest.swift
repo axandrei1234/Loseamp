@@ -49,6 +49,7 @@ class KeychainManager {
             kSecValueData as String: password as AnyObject,
             kSecClass as String: kSecClassGenericPassword
         ]
+        print("Query dictionary: \(query)")
         let status = SecItemAdd(query as CFDictionary, nil)
         guard status != errSecDuplicateItem else {
             throw KeychainError.duplicateEntry
@@ -81,29 +82,49 @@ class KeychainManager {
         let updatedData = [kSecValueData: password] as CFDictionary
         SecItemUpdate(query, updatedData)
     }
-    func delete(service: String, account: String) {
-        let query = [
-            kSecAttrService: service as AnyObject,
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrAccount: account as AnyObject
-        ] as CFDictionary
-        SecItemDelete(query)
-    }
-    func deleteKeychainItems(forService service: String) -> Bool {
+    func deleteKeychainItem(forService service: String, account: String) throws {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecReturnAttributes as String: true,
-            kSecMatchLimit as String: kSecMatchLimitAll
+            kSecAttrAccount as String: account
         ]
-
         let status = SecItemDelete(query as CFDictionary)
-        if status == errSecSuccess {
-            print("Successfully deleted all keychain items with service: \(service)")
-            return true
-        } else {
-            print("Error deleting keychain items: \(status)")
-            return false
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw KeychainError.unknown(status)
+        }
+    }
+    func deleteAllKeychainItems(forService service: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecMatchLimit as String: kSecMatchLimitAll,
+            kSecReturnAttributes as String: true,
+            kSecReturnData as String: true
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        // Check if any items were found
+        guard status != errSecItemNotFound else {
+            print("Nothing to delete")
+            return // no accounts linked with the 'service'
+        }
+        guard status == errSecSuccess else {
+            throw KeychainError.unknown(status)
+        }
+        if let items = result as? [[String: Any]] {
+            for item in items {
+                guard let account = item[kSecAttrAccount as String] as? String else {
+                    continue // Skip items without an account attribute
+                }
+                do {
+                    try deleteKeychainItem(forService: service, account: account)
+                    print("deleted")
+                } catch {
+                    // Handle any errors that occur during deletion
+                    print("Error deleting keychain item for account \(account): \(error)")
+                }
+            }
         }
     }
 
